@@ -1,0 +1,540 @@
+{% extends "base.html" %}
+
+{% block title %}Inbox - Todoist Clone{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Inbox</h1>
+        <div class="flex items-center gap-2 text-gray-500 text-sm">
+            <i class="fa-solid fa-sliders"></i> View
+        </div>
+    </div>
+
+    <!-- Add Task Input -->
+    <div class="group mb-4">
+        <form id="add-task-form"
+            class="hidden bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg p-3 shadow-sm">
+            <input type="text" id="task-content" placeholder="Task name"
+                class="w-full bg-transparent text-sm font-medium placeholder-gray-400 outline-none mb-2 dark:text-white"
+                required>
+            <textarea id="task-desc" placeholder="Description"
+                class="w-full bg-transparent text-xs text-gray-500 outline-none resize-none h-12 dark:text-gray-400"></textarea>
+
+            <div class="flex items-center gap-2 mb-2">
+                <input type="date" id="task-date"
+                    class="bg-transparent text-xs border border-gray-200 dark:border-zinc-700 rounded px-2 py-1 text-gray-500 dark:text-gray-400">
+                <select id="task-project"
+                    class="bg-transparent text-xs border border-gray-200 dark:border-zinc-700 rounded px-2 py-1 text-gray-500 dark:text-gray-400 outline-none">
+                    <option value="">Inbox</option>
+                    <!-- Projects populated via JS -->
+                </select>
+                <select id="task-label"
+                    class="bg-transparent text-xs border border-gray-200 dark:border-zinc-700 rounded px-2 py-1 text-gray-500 dark:text-gray-400 outline-none">
+                    <option value="">No Label</option>
+                    <!-- Labels populated via JS -->
+                </select>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-2 border-t border-gray-100 dark:border-zinc-700 pt-2">
+                <button type="button" onclick="toggleAddTask()"
+                    class="px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded">Cancel</button>
+                <button type="submit"
+                    class="px-3 py-1.5 text-xs font-semibold text-white bg-primary hover:bg-red-600 rounded">Add
+                    task</button>
+            </div>
+        </form>
+        <button id="add-task-btn" onclick="toggleAddTask()"
+            class="flex items-center gap-2 text-gray-500 hover:text-primary font-medium transition-colors w-full text-left">
+            <span
+                class="flex items-center justify-center w-6 h-6 rounded-full hover:bg-primary hover:text-white transition-colors">
+                <i class="fa-solid fa-plus"></i>
+            </span>
+            Add task
+        </button>
+    </div>
+
+    <!-- Task List -->
+    <div class="space-y-1" id="task-list">
+        <!-- Tasks will be loaded here -->
+    </div>
+</div>
+
+<!-- Reminders Modal -->
+<div id="reminders-modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-zinc-800 rounded-lg shadow-xl w-[500px] p-6 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-lg dark:text-white">Reminders</h3>
+            <button onclick="closeRemindersModal()" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Existing Reminders List -->
+        <div id="reminders-list" class="space-y-2 mb-6">
+            <!-- Reminders loaded here -->
+        </div>
+
+        <!-- Add Reminder Form -->
+        <form id="add-reminder-form" class="border-t border-gray-200 dark:border-zinc-700 pt-4">
+            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Add New Reminder</h4>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-gray-200 dark:border-zinc-700 mb-4" id="reminder-tabs">
+                <button type="button" id="tab-absolute" onclick="switchReminderTab('absolute')"
+                    class="px-4 py-2 text-sm font-medium text-primary border-b-2 border-primary focus:outline-none">Specific
+                    Time</button>
+                <button type="button" id="tab-relative" onclick="switchReminderTab('relative')"
+                    class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 focus:outline-none">Before
+                    Task</button>
+                <button type="button" id="tab-location" onclick="switchReminderTab('location')"
+                    class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 focus:outline-none">Location</button>
+            </div>
+
+            <!-- Absolute Time Input -->
+            <div id="reminder-absolute-inputs" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date & Time</label>
+                    <input type="datetime-local" id="reminder-datetime"
+                        class="w-full p-2 border border-gray-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 dark:text-white">
+                </div>
+            </div>
+
+            <!-- Relative Time Input -->
+            <div id="reminder-relative-inputs" class="hidden space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Time Before
+                        Task</label>
+                    <select id="reminder-relative-offset"
+                        class="w-full p-2 border border-gray-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 dark:text-white">
+                        <option value="0">At time of due date</option>
+                        <option value="10">10 minutes before</option>
+                        <option value="30">30 minutes before</option>
+                        <option value="60">1 hour before</option>
+                        <option value="120">2 hours before</option>
+                        <option value="1440">1 day before</option>
+                        <option value="2880">2 days before</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Requires task to have a due date.</p>
+                </div>
+            </div>
+
+            <!-- Location Input -->
+            <div id="reminder-location-inputs" class="hidden space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Location Name</label>
+                    <input type="text" id="reminder-location-name"
+                        class="w-full p-2 border border-gray-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 dark:text-white"
+                        placeholder="e.g., Home, Work">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Trigger</label>
+                    <select id="reminder-location-trigger"
+                        class="w-full p-2 border border-gray-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 dark:text-white">
+                        <option value="enter">Arriving</option>
+                        <option value="leave">Leaving</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pick on Map</label>
+                    <div id="reminder-map"
+                        class="h-48 w-full rounded-md border border-gray-300 dark:border-zinc-700 z-0"></div>
+                    <input type="hidden" id="reminder-lat">
+                    <input type="hidden" id="reminder-lng">
+                    <p class="text-xs text-gray-500 mt-1">Click on the map to set the location.</p>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button type="submit"
+                    class="px-4 py-2 bg-primary text-white rounded-md hover:bg-red-600 transition-colors font-medium text-sm">Add
+                    Reminder</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Task Modal -->
+<div id="edit-task-modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-zinc-800 rounded-lg shadow-xl w-[500px] p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-lg dark:text-white">Edit Task</h3>
+            <button onclick="closeEditTaskModal()" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+
+        <form id="edit-task-form" class="space-y-4">
+            <input type="hidden" id="edit-task-id">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Content</label>
+                <input type="text" id="edit-task-content"
+                    class="w-full p-2 border border-gray-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 dark:text-white"
+                    required>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                <textarea id="edit-task-desc"
+                    class="w-full p-2 border border-gray-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 dark:text-white h-20 resize-none"></textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Due Date</label>
+                    <input type="date" id="edit-task-date"
+                        class="w-full p-2 border border-gray-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priority</label>
+                    <select id="edit-task-priority"
+                        class="w-full p-2 border border-gray-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 dark:text-white">
+                        <option value="1">Priority 1</option>
+                        <option value="2">Priority 2</option>
+                        <option value="3">Priority 3</option>
+                        <option value="4">Priority 4</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project</label>
+                    <select id="edit-task-project"
+                        class="w-full p-2 border border-gray-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 dark:text-white">
+                        <option value="">Inbox</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Label</label>
+                    <select id="edit-task-label"
+                        class="w-full p-2 border border-gray-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 dark:text-white">
+                        <option value="">No Label</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-4">
+                <button type="submit"
+                    class="px-4 py-2 bg-primary text-white rounded-md hover:bg-red-600 transition-colors font-medium text-sm">Save
+                    Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const API_URL = '/api/tasks';
+    let tasks = []; // Global tasks store
+
+    async function fetchTasks() {
+        const response = await fetch(API_URL);
+        tasks = await response.json();
+        renderTasks(tasks);
+    }
+
+    function renderTasks(tasksToRender) {
+        const list = document.getElementById('task-list');
+        list.innerHTML = tasksToRender.map(task => `
+            <div class="group flex items-start gap-3 py-2 border-b border-gray-100 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-800/50 -mx-2 px-2 rounded-md transition-colors cursor-pointer">
+                <button onclick="completeTask(${task.id})" class="mt-1 w-5 h-5 rounded-full border border-gray-400 hover:border-primary flex items-center justify-center text-transparent hover:text-primary transition-all">
+                    <i class="fa-solid fa-check text-xs"></i>
+                </button>
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm text-gray-900 dark:text-gray-100">${task.content}</div>
+                    ${task.description ? `<div class="text-xs text-gray-500 truncate">${task.description}</div>` : ''}
+                    <div class="flex items-center gap-2 mt-1">
+                        ${task.due_date ? `<span class="text-xs text-red-500 flex items-center gap-1"><i class="fa-regular fa-calendar"></i> ${new Date(task.due_date).toLocaleDateString()}</span>` : ''}
+                        ${task.project_id ? `<span class="text-xs text-gray-400 flex items-center gap-1"><i class="fa-solid fa-hashtag text-[10px]"></i> Project ${task.project_id}</span>` : ''}
+                        ${task.labels && task.labels.length > 0 ? task.labels.map(l => `<span class="text-xs text-gray-500 flex items-center gap-1"><i class="fa-solid fa-tag text-[10px]" style="color: ${l.color}"></i> ${l.name}</span>`).join('') : ''}
+                        ${task.reminders && task.reminders.length > 0 ? `<span class="text-xs text-primary flex items-center gap-1"><i class="fa-solid fa-bell"></i> ${task.reminders.length}</span>` : ''}
+                    </div>
+                </div>
+                <div class="opacity-0 group-hover:opacity-100 flex items-center gap-2 text-gray-400">
+                    <button onclick="openRemindersModal(${task.id})" class="hover:text-primary"><i class="fa-solid fa-bell"></i></button>
+                    <button onclick="openEditTaskModal(${task.id})" class="hover:text-primary"><i class="fa-solid fa-pen"></i></button>
+                    <button onclick="deleteTask(${task.id})" class="hover:text-red-500"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function toggleAddTask() {
+        const form = document.getElementById('add-task-form');
+        const btn = document.getElementById('add-task-btn');
+        form.classList.toggle('hidden');
+        btn.classList.toggle('hidden');
+
+        if (!form.classList.contains('hidden')) {
+            document.getElementById('task-content').focus();
+
+            // Populate Projects
+            const projectSelect = document.getElementById('task-project');
+            if (typeof projects !== 'undefined') {
+                projectSelect.innerHTML = '<option value="">Inbox</option>' +
+                    projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+            }
+
+            // Populate Labels
+            const labelSelect = document.getElementById('task-label');
+            if (typeof labels !== 'undefined') {
+                labelSelect.innerHTML = '<option value="">No Label</option>' +
+                    labels.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+            }
+        }
+    }
+
+    document.getElementById('add-task-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const content = document.getElementById('task-content').value;
+        const description = document.getElementById('task-desc').value;
+        const dueDate = document.getElementById('task-date').value;
+        const projectId = document.getElementById('task-project').value;
+        const labelId = document.getElementById('task-label').value;
+
+        const body = { content, description };
+        if (dueDate) body.due_date = new Date(dueDate).toISOString();
+        if (projectId) body.project_id = parseInt(projectId);
+        if (labelId) body.label_ids = [parseInt(labelId)];
+
+        await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        document.getElementById('task-content').value = '';
+        document.getElementById('task-desc').value = '';
+        document.getElementById('task-date').value = '';
+        toggleAddTask();
+        fetchTasks();
+    });
+
+    // Edit Task Logic
+    function openEditTaskModal(taskId) {
+        const task = tasks.find(t => t.id === taskId);
+        if (!task) return;
+
+        document.getElementById('edit-task-id').value = task.id;
+        document.getElementById('edit-task-content').value = task.content;
+        document.getElementById('edit-task-desc').value = task.description || '';
+        document.getElementById('edit-task-date').value = task.due_date ? task.due_date.split('T')[0] : '';
+        document.getElementById('edit-task-priority').value = task.priority;
+
+        // Populate Projects in Edit Modal
+        const projectSelect = document.getElementById('edit-task-project');
+        if (typeof projects !== 'undefined') {
+            projectSelect.innerHTML = '<option value="">Inbox</option>' +
+                projects.map(p => `<option value="${p.id}" ${task.project_id === p.id ? 'selected' : ''}>${p.name}</option>`).join('');
+        }
+
+        // Populate Labels in Edit Modal
+        const labelSelect = document.getElementById('edit-task-label');
+        if (typeof labels !== 'undefined') {
+            const currentLabelId = task.labels && task.labels.length > 0 ? task.labels[0].id : '';
+            labelSelect.innerHTML = '<option value="">No Label</option>' +
+                labels.map(l => `<option value="${l.id}" ${l.id === currentLabelId ? 'selected' : ''}>${l.name}</option>`).join('');
+        }
+
+        document.getElementById('edit-task-modal').classList.remove('hidden');
+    }
+
+    function closeEditTaskModal() {
+        document.getElementById('edit-task-modal').classList.add('hidden');
+    }
+
+    document.getElementById('edit-task-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('edit-task-id').value;
+        const content = document.getElementById('edit-task-content').value;
+        const description = document.getElementById('edit-task-desc').value;
+        const dueDate = document.getElementById('edit-task-date').value;
+        const priority = document.getElementById('edit-task-priority').value;
+        const projectId = document.getElementById('edit-task-project').value;
+        const labelId = document.getElementById('edit-task-label').value;
+
+        const body = {
+            content,
+            description,
+            priority: parseInt(priority)
+        };
+
+        if (dueDate) body.due_date = new Date(dueDate).toISOString();
+        else body.due_date = null; // Clear due date if empty
+
+        if (projectId) body.project_id = parseInt(projectId);
+        else body.project_id = null;
+
+        if (labelId) body.label_ids = [parseInt(labelId)];
+        else body.label_ids = [];
+
+        await fetch(`${API_URL}/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        closeEditTaskModal();
+        fetchTasks();
+    });
+
+    // Reminders Logic
+    let currentReminderTask = null;
+    let reminderMap = null;
+    let reminderMarker = null;
+
+    function openRemindersModal(taskId) {
+        currentReminderTask = tasks.find(t => t.id === taskId);
+        if (!currentReminderTask) return;
+
+        document.getElementById('reminders-modal').classList.remove('hidden');
+        renderRemindersList();
+        switchReminderTab('absolute'); // Default tab
+    }
+
+    function closeRemindersModal() {
+        document.getElementById('reminders-modal').classList.add('hidden');
+        currentReminderTask = null;
+    }
+
+    function switchReminderTab(type) {
+        // Update UI tabs
+        ['absolute', 'relative', 'location'].forEach(t => {
+            const btn = document.getElementById(`tab-${t}`);
+            const inputs = document.getElementById(`reminder-${t}-inputs`);
+
+            if (t === type) {
+                btn.classList.add('text-primary', 'border-b-2', 'border-primary');
+                btn.classList.remove('text-gray-500');
+                inputs.classList.remove('hidden');
+            } else {
+                btn.classList.remove('text-primary', 'border-b-2', 'border-primary');
+                btn.classList.add('text-gray-500');
+                inputs.classList.add('hidden');
+            }
+        });
+
+        // Initialize Map if location tab selected
+        if (type === 'location') {
+            setTimeout(() => {
+                if (!reminderMap) {
+                    reminderMap = L.map('reminder-map').setView([51.505, -0.09], 13);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors'
+                    }).addTo(reminderMap);
+
+                    reminderMap.on('click', function (e) {
+                        const { lat, lng } = e.latlng;
+                        document.getElementById('reminder-lat').value = lat;
+                        document.getElementById('reminder-lng').value = lng;
+
+                        if (reminderMarker) {
+                            reminderMarker.setLatLng(e.latlng);
+                        } else {
+                            reminderMarker = L.marker(e.latlng).addTo(reminderMap);
+                        }
+                    });
+
+                    // Try to get user location
+                    if ("geolocation" in navigator) {
+                        navigator.geolocation.getCurrentPosition(position => {
+                            const { latitude, longitude } = position.coords;
+                            reminderMap.setView([latitude, longitude], 13);
+                        });
+                    }
+                } else {
+                    reminderMap.invalidateSize();
+                }
+            }, 100);
+        }
+    }
+
+    function renderRemindersList() {
+        const list = document.getElementById('reminders-list');
+        if (!currentReminderTask.reminders || currentReminderTask.reminders.length === 0) {
+            list.innerHTML = '<div class="text-sm text-gray-500 text-center py-2">No reminders set</div>';
+            return;
+        }
+
+        list.innerHTML = currentReminderTask.reminders.map(r => {
+            let desc = '';
+            if (r.type === 'absolute') desc = new Date(r.remind_at).toLocaleString();
+            else if (r.type === 'relative') desc = `${r.relative_offset_minutes} mins before task`;
+            else if (r.type === 'location') desc = `${r.location_trigger === 'enter' ? 'Arriving at' : 'Leaving'} ${r.location_name}`;
+
+            return `
+                <div class="flex justify-between items-center p-2 bg-gray-50 dark:bg-zinc-700 rounded">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">${desc}</span>
+                    <button onclick="deleteReminder(${r.id})" class="text-red-500 hover:text-red-700">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    document.getElementById('add-reminder-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!currentReminderTask) return;
+
+        const activeTab = document.querySelector('#reminder-tabs button.text-primary').id.replace('tab-', '');
+        let payload = { task_id: currentReminderTask.id, type: activeTab };
+
+        if (activeTab === 'absolute') {
+            payload.remind_at = document.getElementById('reminder-datetime').value;
+        } else if (activeTab === 'relative') {
+            payload.relative_offset_minutes = parseInt(document.getElementById('reminder-relative-offset').value);
+        } else if (activeTab === 'location') {
+            payload.location_name = document.getElementById('reminder-location-name').value;
+            payload.location_trigger = document.getElementById('reminder-location-trigger').value;
+            payload.latitude = document.getElementById('reminder-lat').value;
+            payload.longitude = document.getElementById('reminder-lng').value;
+        }
+
+        const res = await fetch('/api/reminders/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            // Refresh task to get updated reminders
+            await fetchTasks();
+            currentReminderTask = tasks.find(t => t.id === currentReminderTask.id);
+            renderRemindersList();
+            e.target.reset();
+        }
+    });
+
+    async function deleteReminder(reminderId) {
+        if (!confirm("Delete this reminder?")) return;
+        await fetch(`/api/reminders/${reminderId}`, { method: 'DELETE' });
+        await fetchTasks();
+        currentReminderTask = tasks.find(t => t.id === currentReminderTask.id);
+        renderRemindersList();
+    }
+
+    async function deleteTask(id) {
+        if (confirm('Are you sure?')) {
+            await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+            fetchTasks();
+        }
+    }
+
+    async function completeTask(id) {
+        await deleteTask(id);
+    }
+
+    // Initial load
+    fetchTasks();
+
+    // Override global loadFilterTasks
+    window.loadFilterTasks = async function (id) {
+        const response = await fetch(`/api/filters/${id}/tasks`);
+        const tasksToRender = await response.json();
+        renderTasks(tasksToRender);
+
+        // Update header
+        const filterName = filters.find(f => f.id === id)?.name || 'Filter';
+        document.querySelector('h1').innerText = filterName;
+        document.getElementById('add-task-form').parentElement.classList.add('hidden'); // Hide add task for filters for now
+    }
+</script>
+{% endblock %}

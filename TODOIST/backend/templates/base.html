@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Todoist Clone{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#dc2626',
+                        sidebar: '#fafaf9',
+                        darkSidebar: '#1f1f1f',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #e5e5e5;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #d4d4d4;
+        }
+    </style>
+</head>
+
+<body class="bg-white dark:bg-zinc-900 text-gray-800 dark:text-gray-200 transition-colors duration-200">
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <aside
+            class="w-64 bg-sidebar dark:bg-darkSidebar border-r border-gray-200 dark:border-zinc-800 flex-shrink-0 hidden md:flex flex-col">
+            <div class="p-4 flex items-center justify-between">
+                <div class="flex items-center gap-2 font-bold text-lg text-primary">
+                    <i class="fa-solid fa-check-double"></i> Todoist Clone
+                </div>
+                <button class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                    <i class="fa-solid fa-bell"></i>
+                </button>
+            </div>
+
+            <nav class="flex-1 overflow-y-auto px-2 space-y-1">
+                <a href="#"
+                    class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md bg-white dark:bg-zinc-800 shadow-sm text-gray-900 dark:text-white">
+                    <i class="fa-solid fa-inbox text-blue-500"></i> Inbox
+                </a>
+                <a href="#"
+                    class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300">
+                    <i class="fa-solid fa-calendar-day text-green-500"></i> Today
+                </a>
+                <a href="#"
+                    class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300">
+                    <i class="fa-solid fa-calendar-days text-purple-500"></i> Upcoming
+                </a>
+
+                <!-- Projects -->
+                <div class="mt-6">
+                    <div
+                        class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider flex justify-between items-center group">
+                        Projects
+                        <button onclick="createProject()"
+                            class="opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded p-1 transition-opacity">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                    <div id="project-list" class="mt-1 space-y-1"></div>
+                </div>
+
+                <!-- Labels -->
+                <div class="mt-6">
+                    <div
+                        class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider flex justify-between items-center group">
+                        Labels
+                        <button onclick="createLabel()"
+                            class="opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded p-1 transition-opacity">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                    <div id="label-list" class="mt-1 space-y-1"></div>
+                </div>
+
+                <!-- Filters -->
+                <div class="mt-6">
+                    <div
+                        class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider flex justify-between items-center group">
+                        Filters
+                        <button onclick="createFilter()"
+                            class="opacity-0 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded p-1 transition-opacity">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                    <div id="filter-list" class="mt-1 space-y-1"></div>
+                </div>
+
+                <!-- Activity Log -->
+                <div class="mt-6 pt-6 border-t border-gray-200 dark:border-zinc-800">
+                    <button onclick="openActivityLogModal()"
+                        class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300 w-full">
+                        <i class="fa-solid fa-clock-rotate-left text-gray-400"></i> Activity Log
+                    </button>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-white dark:bg-zinc-900">
+            <header
+                class="md:hidden flex items-center justify-between p-4 border-b border-gray-200 dark:border-zinc-800">
+                <button class="text-gray-500"><i class="fa-solid fa-bars"></i></button>
+                <span class="font-bold text-primary">Todoist</span>
+                <button class="text-gray-500"><i class="fa-solid fa-plus"></i></button>
+            </header>
+
+            <div class="flex-1 overflow-y-auto p-4 md:p-8 max-w-4xl mx-auto w-full">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <!-- Activity Log Modal -->
+    <div id="activity-log-modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-zinc-800 rounded-lg shadow-xl w-[600px] max-h-[80vh] flex flex-col p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg dark:text-white">Activity Log</h3>
+                <button onclick="closeActivityLogModal()"
+                    class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <div id="activity-log-list" class="flex-1 overflow-y-auto space-y-4 pr-2">
+                <!-- Activity logs loaded here -->
+            </div>
+        </div>
+    </div>
+
+    {% block scripts %}
+    <script>
+        // Global State
+        let projects = [];
+        let labels = [];
+        let filters = [];
+
+        async function fetchProjects() {
+            const response = await fetch('/api/projects/');
+            projects = await response.json();
+            renderProjects();
+        }
+
+        async function fetchLabels() {
+            const response = await fetch('/api/labels/');
+            labels = await response.json();
+            renderLabels();
+        }
+
+        async function fetchFilters() {
+            const response = await fetch('/api/filters/');
+            filters = await response.json();
+            renderFilters();
+        }
+
+        function renderProjects() {
+            const list = document.getElementById('project-list');
+            if (!list) return;
+
+            list.innerHTML = projects.map(project => `
+                <a href="#" class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300 group">
+                    <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${project.color}"></span>
+                    <span class="flex-1 truncate">${project.name}</span>
+                    <button onclick="deleteProject(event, ${project.id})" class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500">
+                        <i class="fa-solid fa-trash text-xs"></i>
+                    </button>
+                </a>
+            `).join('');
+        }
+
+        function renderLabels() {
+            const list = document.getElementById('label-list');
+            if (!list) return;
+
+            list.innerHTML = labels.map(label => `
+                <a href="#" class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300 group">
+                    <i class="fa-solid fa-tag text-gray-400" style="color: ${label.color}"></i>
+                    <span class="flex-1 truncate">${label.name}</span>
+                    <button onclick="deleteLabel(event, ${label.id})" class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500">
+                        <i class="fa-solid fa-trash text-xs"></i>
+                    </button>
+                </a>
+            `).join('');
+        }
+
+        function renderFilters() {
+            const list = document.getElementById('filter-list');
+            if (!list) return;
+
+            list.innerHTML = filters.map(filter => `
+                <a href="#" onclick="loadFilterTasks(${filter.id})" class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300 group">
+                    <i class="fa-solid fa-filter text-gray-400" style="color: ${filter.color}"></i>
+                    <span class="flex-1 truncate">${filter.name}</span>
+                    <button onclick="deleteFilter(event, ${filter.id})" class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500">
+                        <i class="fa-solid fa-trash text-xs"></i>
+                    </button>
+                </a>
+            `).join('');
+        }
+
+        async function createProject() {
+            const name = prompt("Project Name:");
+            if (!name) return;
+
+            await fetch('/api/projects/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, color: 'grey' })
+            });
+            fetchProjects();
+        }
+
+        async function createLabel() {
+            const name = prompt("Label Name:");
+            if (!name) return;
+
+            await fetch('/api/labels/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, color: 'grey' })
+            });
+            fetchLabels();
+        }
+
+        async function createFilter() {
+            const name = prompt("Filter Name:");
+            const query = prompt("Filter Query (e.g., 'due:today', 'priority:4'):");
+            if (!name || !query) return;
+
+            await fetch('/api/filters/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, query, color: 'grey' })
+            });
+            fetchFilters();
+        }
+
+        async function deleteProject(event, id) {
+            event.preventDefault();
+            if (!confirm("Delete this project?")) return;
+            await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+            fetchProjects();
+        }
+
+        async function deleteLabel(event, id) {
+            event.preventDefault();
+            if (!confirm("Delete this label?")) return;
+            await fetch(`/api/labels/${id}`, { method: 'DELETE' });
+            fetchLabels();
+        }
+
+        async function deleteFilter(event, id) {
+            event.preventDefault();
+            if (!confirm("Delete this filter?")) return;
+            await fetch(`/api/filters/${id}`, { method: 'DELETE' });
+            fetchFilters();
+        }
+
+        // Activity Log
+        function openActivityLogModal() {
+            document.getElementById('activity-log-modal').classList.remove('hidden');
+            fetchActivityLog();
+        }
+
+        function closeActivityLogModal() {
+            document.getElementById('activity-log-modal').classList.add('hidden');
+        }
+
+        async function fetchActivityLog() {
+            const response = await fetch('/api/activity/');
+            const activities = await response.json();
+            const list = document.getElementById('activity-log-list');
+
+            list.innerHTML = activities.map(activity => `
+                <div class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-zinc-700 rounded-md">
+                    <i class="fa-solid fa-circle-dot text-primary text-xs mt-1"></i>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm text-gray-700 dark:text-gray-300">${activity.description}</p>
+                        <p class="text-xs text-gray-500 mt-1">${new Date(activity.created_at).toLocaleString()}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Location Manager for Geolocation Reminders
+        const LocationManager = {
+            watchId: null,
+            currentPosition: null,
+            notifiedReminders: new Set(),
+
+            async init() {
+                if (!("geolocation" in navigator)) {
+                    console.warn("Geolocation not supported");
+                    return;
+                }
+
+                // Request notification permission
+                if ("Notification" in window && Notification.permission === "default") {
+                    await Notification.requestPermission();
+                }
+
+                // Start watching position
+                this.watchId = navigator.geolocation.watchPosition(
+                    position => this.onPositionUpdate(position),
+                    error => console.error("Geolocation error:", error),
+                    { enableHighAccuracy: true, maximumAge: 10000 }
+                );
+            },
+
+            async onPositionUpdate(position) {
+                this.currentPosition = position.coords;
+                await this.checkReminders();
+            },
+
+            async checkReminders() {
+                if (!this.currentPosition) return;
+
+                // Fetch all tasks with location reminders
+                const response = await fetch('/api/tasks/');
+                const tasks = await response.json();
+
+                for (const task of tasks) {
+                    if (!task.reminders) continue;
+
+                    for (const reminder of task.reminders) {
+                        if (reminder.type !== 'location') continue;
+                        if (!reminder.latitude || !reminder.longitude) continue;
+                        if (this.notifiedReminders.has(reminder.id)) continue;
+
+                        const distance = this.calculateDistance(
+                            this.currentPosition.latitude,
+                            this.currentPosition.longitude,
+                            parseFloat(reminder.latitude),
+                            parseFloat(reminder.longitude)
+                        );
+
+                        // Trigger within 200 meters
+                        if (distance < 200) {
+                            const shouldTrigger =
+                                (reminder.location_trigger === 'enter' && distance < 200) ||
+                                (reminder.location_trigger === 'leave' && distance > 200);
+
+                            if (shouldTrigger) {
+                                this.sendNotification(task, reminder);
+                                this.notifiedReminders.add(reminder.id);
+                            }
+                        }
+                    }
+                }
+            },
+
+            calculateDistance(lat1, lon1, lat2, lon2) {
+                const R = 6371e3; // Earth radius in meters
+                const φ1 = lat1 * Math.PI / 180;
+                const φ2 = lat2 * Math.PI / 180;
+                const Δφ = (lat2 - lat1) * Math.PI / 180;
+                const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+                const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                    Math.cos(φ1) * Math.cos(φ2) *
+                    Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+                return R * c;
+            },
+
+            sendNotification(task, reminder) {
+                if (!("Notification" in window) || Notification.permission !== "granted") return;
+
+                const title = `Reminder: ${task.content}`;
+                const body = `${reminder.location_trigger === 'enter' ? 'Arriving at' : 'Leaving'} ${reminder.location_name}`;
+
+                new Notification(title, {
+                    body: body,
+                    icon: '/static/icon.png',
+                    tag: `reminder-${reminder.id}`
+                });
+            },
+
+            stop() {
+                if (this.watchId !== null) {
+                    navigator.geolocation.clearWatch(this.watchId);
+                }
+            }
+        };
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchProjects();
+            fetchLabels();
+            fetchFilters();
+            LocationManager.init();
+        });
+    </script>
+    {% endblock %}
+</body>
+
+</html>
